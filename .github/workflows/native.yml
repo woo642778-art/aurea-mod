@@ -26,6 +26,19 @@ jobs:
                       assert p.parts[0] in {'native', 'tests', 'tools'}
                   archive.extractall('.')
               pathlib.Path('.native-bootstrap').write_text('Reviewed source transfer: 1c67054612dd357bbde089ce59d2f5c03a494cf464e8b9967d30c1116d1633c2\n')
+          fixes = {
+              'native/AUServer.m': [('AUJSON(fd,400,@{"error":', 'AUJSON(fd,400,@{@"error":'), ('NSCharacterSet.URLPathAllowedCharacterSet', '[NSCharacterSet characterSetWithCharactersInString:@"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"]'), ('Close and reopen Studio before importing more files.', 'Restart Aurea before importing more files into Studio.')],
+              'native/AUStudio.m': [('addScriptMessageHandler:handler contentWorld:', 'addScriptMessageHandlerWithReply:handler contentWorld:')]
+          }
+          for name, replacements in fixes.items():
+              path = pathlib.Path(name)
+              source = path.read_text()
+              for before, after in replacements:
+                  if before in source:
+                      source = source.replace(before, after)
+                  else:
+                      assert after in source, 'Unrecognized source for ' + name
+              path.write_text(source)
           PY
       - name: Publish editable source files in the authorized repository
         run: |
@@ -33,7 +46,7 @@ jobs:
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'chore: materialize audited native integration source'
+            git commit -m 'fix: verified Objective-C contracts and URL encoding'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
