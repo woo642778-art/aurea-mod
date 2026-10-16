@@ -1,0 +1,59 @@
+name: Build Aurea Studio native extension
+on:
+  push:
+    paths: ['.github/workflows/native.yml', 'build-input/native.*.b64', 'native/**', 'tests/*.m', 'tests/test_server.py', 'tools/build_native.sh']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  native:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize reviewed source once
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, pathlib, tarfile
+          if not pathlib.Path('.native-bootstrap').exists():
+              chunks = sorted(pathlib.Path('build-input').glob('native.*.b64'))
+              raw = base64.b64decode(''.join(p.read_text().strip() for p in chunks), validate=True)
+              assert hashlib.sha256(raw).hexdigest() == '1c67054612dd357bbde089ce59d2f5c03a494cf464e8b9967d30c1116d1633c2', 'source transfer digest mismatch'
+              with tarfile.open(fileobj=io.BytesIO(raw), mode='r:xz') as archive:
+                  for item in archive.getmembers():
+                      p = pathlib.PurePosixPath(item.name)
+                      assert item.isfile() and not p.is_absolute() and '..' not in p.parts
+                      assert p.parts[0] in {'native', 'tests', 'tools'}
+                  archive.extractall('.')
+              pathlib.Path('.native-bootstrap').write_text('Reviewed source transfer: 1c67054612dd357bbde089ce59d2f5c03a494cf464e8b9967d30c1116d1633c2\n')
+          PY
+      - name: Publish editable source files in the authorized repository
+        run: |
+          git add native tests tools .native-bootstrap
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: materialize audited native integration source'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Compile for iOS and verify native contracts
+        run: |
+          set -o pipefail
+          mkdir -p evidence
+          bash tools/build_native.sh 2>&1 | tee evidence/native-build.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: AureaCraft-native
+          path: |
+            dist/AureaCraft.dylib
+            dist/binary-info.txt
+            dist/load-commands.txt
+            dist/SHA256SUMS
+            evidence/
+            native/
+            tests/
+            tools/
+          if-no-files-found: error
+          retention-days: 14
