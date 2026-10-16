@@ -14,10 +14,11 @@ jobs:
       - name: Build real simulator app and production extension
         run: |
           set -euo pipefail
+          python3 tools/refine_native.py
           mkdir -p smoke/Smoke.app/Frameworks evidence
           APP="$PWD/smoke/Smoke.app"
           SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
-          COMMON=(-O2 -Wall -Wextra -Wno-unused-parameter -I native -target arm64-apple-ios16.3-simulator -isysroot "$SDK")
+          COMMON=(-O2 -Wall -Wextra -Wno-unused-parameter -I native -target "$(uname -m)-apple-ios16.3-simulator" -isysroot "$SDK")
           xcrun clang "${COMMON[@]}" -c native/AUHTTP.c -o smoke/http.o
           xcrun clang "${COMMON[@]}" -fobjc-arc -fmodules -dynamiclib native/AUServer.m native/AUEngineAccess.m native/AUStudio.m smoke/http.o -framework Foundation -framework UIKit -framework WebKit -framework UniformTypeIdentifiers -install_name @executable_path/Frameworks/AureaCraft.dylib -o "$APP/Frameworks/AureaCraft.dylib"
           xcrun clang "${COMMON[@]}" -fobjc-arc -fmodules tests/ios_smoke.m -framework Foundation -framework UIKit -framework WebKit -Wl,-weak_library,"$APP/Frameworks/AureaCraft.dylib" -o "$APP/Smoke"
