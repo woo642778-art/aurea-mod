@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Apply verified startup ordering correction
+      - name: Apply verified startup and test lifecycle corrections
         run: python3 tools/refine_native.py
       - name: Compile for iOS and verify native contracts
         run: |
@@ -20,11 +20,11 @@ jobs:
           bash tools/build_native.sh 2>&1 | tee evidence/native-build.log
       - name: Publish verified editable source correction
         run: |
-          git add native/
+          git add native/ tests/ios_smoke.m
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'fix: observe host engine after Objective-C class registration'
+            git commit -m 'test: preserve engine observer and model active host rendering'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
