@@ -59,7 +59,7 @@ static void AUAlert(UIViewController *vc,NSString *title,NSString *message) {
     config.mediaTypesRequiringUserActionForPlayback=WKAudiovisualMediaTypeAudio;
     config.preferences.javaScriptCanOpenWindowsAutomatically=NO;
     AUWeakReplyHandler *handler=[AUWeakReplyHandler new];handler.target=self;
-    [config.userContentController addScriptMessageHandler:handler contentWorld:WKContentWorld.pageWorld name:@"aureaStudio"];
+    [config.userContentController addScriptMessageHandlerWithReply:handler contentWorld:WKContentWorld.pageWorld name:@"aureaStudio"];
     self.web=[[WKWebView alloc] initWithFrame:CGRectZero configuration:config];
     self.web.navigationDelegate=self; self.web.UIDelegate=self;
     self.web.opaque=NO; self.web.backgroundColor=UIColor.systemBackgroundColor;

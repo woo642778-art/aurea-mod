@@ -137,10 +137,10 @@ static BOOL AUFilename(NSString *name) {
     }
     NSString *key=NSUUID.UUID.UUIDString.lowercaseString;
     @synchronized(self) {
-        if(_inputs.count>=256) { if(error)*error=AUError(@"Close and reopen Studio before importing more files."); return nil; }
+        if(_inputs.count>=256) { if(error)*error=AUError(@"Restart Aurea before importing more files into Studio."); return nil; }
         _inputs[key]=resolved;
     }
-    NSString *leaf=[resolved.lastPathComponent stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLPathAllowedCharacterSet];
+    NSString *leaf=[resolved.lastPathComponent stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet characterSetWithCharactersInString:@"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"]];
     NSString *urlString=[self.baseURL.absoluteString stringByAppendingFormat:@"media/%@/%@",key,leaf?:@"media.bin"];
     return @{@"name":resolved.lastPathComponent,@"url":urlString,@"bytes":size};
 }
@@ -205,7 +205,7 @@ static BOOL AUFilename(NSString *name) {
     NSString *origin=[@"http://" stringByAppendingString:host];
     if(headers[@"origin"] && ![headers[@"origin"] isEqualToString:origin]) { AUJSON(fd,403,@{@"error":@"Origin mismatch."}); return; }
     NSURLComponents *parts=[NSURLComponents componentsWithString:[origin stringByAppendingString:target]];
-    if(![parts.percentEncodedPath hasPrefix:prefix]) { AUJSON(fd,400,@{"error":@"Invalid request URL."}); return; }
+    if(![parts.percentEncodedPath hasPrefix:prefix]) { AUJSON(fd,400,@{@"error":@"Invalid request URL."}); return; }
     NSString *relative=[[parts.percentEncodedPath substringFromIndex:prefix.length] stringByRemovingPercentEncoding];
     if(!relative || [relative rangeOfCharacterFromSet:NSCharacterSet.controlCharacterSet].location!=NSNotFound || !AUSafeRelativePath(relative.UTF8String)) { AUJSON(fd,400,@{@"error":@"Invalid resource path."}); return; }
     if([method isEqualToString:@"POST"] && [relative isEqualToString:@"api/export"]) {
