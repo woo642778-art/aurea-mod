@@ -25,10 +25,10 @@ static NSArray *selectedIDs;
 #define CHECK(x) do{if(!(x)){fprintf(stderr,"FAIL line %d: %s\n",__LINE__,#x);return 1;}checks++;}while(0)
 int main(void){@autoreleasepool {
     int checks=0;[AUEngineAccess install];[AUEngineAccess install];
-    CHECK(![AUEngineAccess status][@"available"].boolValue);
+    CHECK(![[AUEngineAccess status][@"available"] boolValue]);
     AureaEngine *engine=[AureaEngine new];[engine resume];[engine requestRender];
     CHECK(resumes==1&&renders==1);CHECK([AUEngineAccess current]==engine);
-    CHECK([AUEngineAccess status][@"available"].boolValue);
+    CHECK([[AUEngineAccess status][@"available"] boolValue]);
     sourcePath=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".png"]];
     CHECK([[@"file-fixture" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:sourcePath atomically:YES]);
     NSError *error=nil;NSArray *media=[AUEngineAccess selectedMedia:&error];CHECK(!error&&media.count==1);CHECK([media[0] path]!=nil);CHECK([[media[0] path] isEqualToString:sourcePath]);
