@@ -1,0 +1,52 @@
+name: Prepare verified EffectCraft inputs
+on:
+  push:
+    paths: ['.github/workflows/upstream.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch pinned upstream sources and release runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, urllib.request
+          out = pathlib.Path('upstream')
+          out.mkdir()
+          commit = '7c733f4cc9043f011a5f87ef6a83d18c8fb6aa3b'
+          tag = 'v0.10.0'
+          def get(url, auth=False):
+              headers = {'User-Agent': 'aurea-mod-build', 'Accept': 'application/vnd.github+json'}
+              if auth:
+                  headers['Authorization'] = 'Bearer ' + os.environ['GH_TOKEN']
+              with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=120) as r:
+                  return r.read()
+          release = json.loads(get('https://api.github.com/repos/storytold/effectcraft/releases/tags/' + tag, True))
+          assets = [a for a in release['assets'] if a['name'].startswith('effectcraft-web-') and a['name'].endswith('.zip')]
+          if len(assets) != 1:
+              raise SystemExit('Expected exactly one official EffectCraft web ZIP: ' + repr([a['name'] for a in release['assets']]))
+          asset = assets[0]
+          runtime = get(asset['browser_download_url'])
+          digest = hashlib.sha256(runtime).hexdigest()
+          expected = asset.get('digest', '')
+          if expected != 'sha256:' + digest:
+              raise SystemExit('Official runtime digest absent or mismatched')
+          (out / 'effectcraft-web.zip').write_bytes(runtime)
+          source = get('https://codeload.github.com/storytold/effectcraft/zip/' + commit)
+          (out / 'effectcraft-source.zip').write_bytes(source)
+          provenance = {'source_commit': commit, 'source_sha256': hashlib.sha256(source).hexdigest(), 'release': tag, 'release_commit': release['target_commitish'], 'runtime_asset': asset['name'], 'runtime_url': asset['browser_download_url'], 'runtime_sha256': digest, 'official_digest': expected}
+          (out / 'provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
+          print(json.dumps(provenance, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-effectcraft-inputs
+          path: upstream/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
