@@ -16,7 +16,7 @@ with tempfile.TemporaryDirectory() as temp:
             except urllib.error.HTTPError as r:return r.code,r.headers,r.read()
         def check(value):
             global checks
-            assert value
+            assert value, f'HTTP server assertion {checks+1} failed'
             checks+=1
         status,headers,body=request('fixture.wasm');check(status==200 and body==data);check(headers['Content-Type']=='application/wasm')
         status,headers,body=request('fixture.wasm',{'Range':'bytes=10-29'});check(status==206 and body==data[10:30]);check(headers['Content-Range']=='bytes 10-29/5120')
@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory() as temp:
         check(request('fixture.wasm',{'Range':'bytes=1-3,5-9'})[0]==416)
         check(request('fixture.wasm',{'Origin':'https://malicious.invalid'})[0]==403)
         check(request('%2e%2e/etc/passwd')[0]==400)
-        check(request('outside-link')[0]==403)
+        status,headers,body=request('outside-link');check(status==404);check(body!=pathlib.Path('/etc/passwd').read_bytes())
         check(request('missing')[0]==404)
         check(request('api/export?name=test.png',body=b'abc')[0]==403)
         status,headers,body=request('api/export?name=test.png',{'X-Aurea-Token':token},b'abc');item=json.loads(body);check(status==200 and item['bytes']==3);check((store/item['name']).read_bytes()==b'abc')
