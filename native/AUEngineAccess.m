@@ -36,7 +36,9 @@ static NSError *AUBridgeError(NSString *message) { return [NSError errorWithDoma
 + (id)current { @synchronized(self) { return AULiveEngine; } }
 + (NSDictionary *)status {
     id engine=[self current];
-    return @{@"available":@(engine!=nil),@"observing":@(AUInstalled),@"mode":@"additive-media-bridge",@"nativeEffectParity":@NO};
+    // Boxing a C comparison produces NSNumber(int), which WebKit sends as 1/0.
+    // Explicit boolean objects preserve the JavaScript bridge schema on every ABI.
+    return @{@"available":engine ? @YES : @NO,@"observing":AUInstalled ? @YES : @NO,@"mode":@"additive-media-bridge",@"nativeEffectParity":@NO};
 }
 + (NSArray<NSURL *> *)selectedMedia:(NSError **)error {
     if(!NSThread.isMainThread) {if(error)*error=AUBridgeError(@"Open this command on the editor thread.");return @[];}
