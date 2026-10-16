@@ -1,0 +1,38 @@
+name: Verify and export integration source
+on:
+  push:
+    paths: ['.github/workflows/source.yml', 'tools/package_ipa.py', 'tools/patch_macho.py', 'tools/rebuild.sh', 'tests/test_package.py', 'tests/test_macho.py']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify source and packaging contracts
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 -m unittest discover -s tests -p test_package.py 2>&1 | tee evidence/package-tests.log
+          python3 -m unittest discover -s tests -p test_macho.py 2>&1 | tee evidence/macho-tests.log
+          python3 tests/test_http.py 2>&1 | tee evidence/http-tests.log
+          node --check web/studio.mjs
+          node --test tests/core.test.mjs | tee evidence/core-tests.log
+          bash -n tools/rebuild.sh tools/build_native.sh
+      - name: Export source without original IPA or upstream binaries
+        run: |
+          git rev-parse HEAD > evidence/source-commit.txt
+          git archive --format=zip --prefix=Aurea-Studio-source/ --output=Aurea-Studio-source.zip HEAD README.md LICENSE native web tests tools docs .github .web-bootstrap .native-bootstrap
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AureaCraft-source
+          path: |
+            Aurea-Studio-source.zip
+            evidence/
+          if-no-files-found: error
+          retention-days: 14
