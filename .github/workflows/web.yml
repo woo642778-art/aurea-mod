@@ -1,0 +1,76 @@
+name: Verify Aurea Studio touch workspace
+on:
+  push:
+    paths: ['.github/workflows/web.yml', 'build-input/web.*.b64', 'web/**', 'tests/test_web.py', 'tests/core.test.mjs', 'tests/test_http.py', 'tests/test_http.c']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Materialize reviewed touch-workspace sources once
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, pathlib, tarfile
+          if not pathlib.Path('.web-bootstrap').exists():
+              chunks = sorted(pathlib.Path('build-input').glob('web.*.b64'))
+              raw = base64.b64decode(''.join(p.read_text().strip() for p in chunks), validate=True)
+              assert hashlib.sha256(raw).hexdigest() == '94eae43e94c5a27811bcdccc0d512fb521071b9909baf95d0a2edf8b23779ed9', 'source transfer digest mismatch'
+              with tarfile.open(fileobj=io.BytesIO(raw), mode='r:xz') as archive:
+                  for item in archive.getmembers():
+                      p = pathlib.PurePosixPath(item.name)
+                      assert item.isfile() and not p.is_absolute() and '..' not in p.parts
+                      assert p.parts[0] in {'web', 'tests', 'docs', 'README.md', 'LICENSE'}
+                  archive.extractall('.')
+              pathlib.Path('.web-bootstrap').write_text('Reviewed source transfer: 94eae43e94c5a27811bcdccc0d512fb521071b9909baf95d0a2edf8b23779ed9\n')
+          PY
+      - name: Publish editable workspace and test sources
+        run: |
+          git add web tests docs README.md LICENSE .web-bootstrap
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'feat: mobile touch workspace using actual EffectCraft engine'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Validate portable units and JavaScript syntax
+        run: |
+          mkdir -p evidence
+          node --check web/studio.mjs
+          node --test tests/core.test.mjs | tee evidence/core-tests.log
+          python3 tests/test_http.py 2>&1 | tee evidence/http-tests.log
+      - name: Prepare verified official offline runtime
+        run: |
+          curl --fail --location --retry 3 https://github.com/storytold/effectcraft/releases/download/v0.10.0/effectcraft-web-0.10.0.zip -o runtime.zip
+          echo 'b922abeda2420391a7fd887f53ebae6948730e63720bad6a6eb3dc48dc1b46a8  runtime.zip' | sha256sum --check
+          unzip -q runtime.zip -d runtime
+          cp web/* runtime/effectcraft-web-0.10.0/
+          python3 -m pip install playwright==1.56.0 pillow
+          python3 -m playwright install --with-deps chromium
+      - name: Test actual engine through touch controls
+        run: |
+          set -o pipefail
+          python3 tests/test_web.py runtime/effectcraft-web-0.10.0 evidence 2>&1 | tee evidence/web-tests.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: AureaCraft-web-evidence
+          path: |
+            evidence/
+            web/
+            tests/
+            docs/
+            README.md
+            LICENSE
+          retention-days: 14
+          if-no-files-found: error
