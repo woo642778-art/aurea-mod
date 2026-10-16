@@ -255,8 +255,6 @@ static void AUAlert(UIViewController *vc,NSString *title,NSString *message) {
 + (instancetype)shared {static AUStudioLauncher *s;static dispatch_once_t once;dispatch_once(&once,^{s=[self new];});return s;}
 - (void)onNotification:(NSNotification *)notification { (void)notification; [self attach]; }
 - (void)attach {
-    // The host class may not exist yet in a dependent dylib constructor.
-    [AUEngineAccess install];
     if(!NSThread.isMainThread){dispatch_async(dispatch_get_main_queue(),^{[self attach];});return;}
     [AUEngineAccess install];
     for(UIScene *scene in UIApplication.sharedApplication.connectedScenes) {

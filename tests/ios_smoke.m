@@ -53,6 +53,8 @@ static void Save(id value) {
     if(self.started)return;
     if(++self.attempts>150){Save(@{@"success":@NO,@"error":@"Studio launch/readiness timed out"});return;}
     UIButton *launcher=[self.window viewWithTag:0x41554352];
+    // Model a render request from the active host editor after scene activation.
+    if(launcher){[self.engine requestRender];}
     UINavigationController *nav=(id)self.window.rootViewController.presentedViewController;
     if(!nav && launcher){[launcher sendActionsForControlEvents:UIControlEventTouchUpInside];}
     if([nav isKindOfClass:UINavigationController.class]) {
@@ -70,7 +72,7 @@ static void Save(id value) {
     @"const bridge=(action,args={})=>webkit.messageHandlers.aureaStudio.postMessage({action,...args});"
     @"check('real WASM effects',AureaStudio.counts.effects===307);"
     @"check('real command registry',AureaStudio.counts.commands===731);"
-    @"const status=await bridge('status');check('reply handler and mock engine captured',status.available===true);"
+    @"const status=await bridge('status');check('reply handler and mock engine captured '+JSON.stringify(status),status.available===true);"
     @"const selected=await bridge('selectedMedia');check('selected-media bridge',selected.length===1);"
     @"const input=await fetch(selected[0].url);check('encoded source URL',input.ok&&(await input.arrayBuffer()).byteLength>32);"
     @"await AureaStudio.command('comp.new',{name:'iOS validation',width:320,height:240,frameRate:24,duration:1});"
