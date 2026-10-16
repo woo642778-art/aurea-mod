@@ -97,7 +97,7 @@ function propertyEditor(prop,layer,spec){
 function propertyGroup(group,layer,depth=0,spec=null){
   if(!group.children)return propertyEditor(group,layer,spec?.params?.find(p=>p.id===group.match||p.id===group.path?.split('/').pop()));
   if(group.effect){const id=typeof group.effect==='string'?group.effect:group.effect.id;spec=state.effects.find(e=>e.id===id)??spec;}
-  const d=node('details','',{class:'property-group'});d.open=depth<=1;d.append(node('summary',group.name||group.match||'속성'));
+  const d=node('details','',{class:'property-group'});d.open=depth<=1||!!group.effect;d.append(node('summary',group.name||group.match||'속성'));
   for(const child of group.children)d.append(propertyGroup(child,layer,depth+1,spec));return d;
 }
 async function renderProperties(panel){if(selected()===undefined){panel.append(hint('레이어 탭에서 편집할 레이어를 선택하세요.'));return;}
@@ -163,7 +163,7 @@ async function importFiles(mode='files',existing=null){
       const before=await exec('project.summary');const old=new Set(before.items.map(x=>x.id));ec.addFile(`${uid()}-${safeName(file.name)}`,bytes);const after=await exec('project.summary');
       if(/\.ecproj$/i.test(file.name))continue;
       const added=after.items.filter(x=>!old.has(x.id));if(!added.length)throw Error(`${file.name}: 가져온 프로젝트 항목을 찾지 못했습니다. 지원 형식인지 확인하세요.`);
-      for(const item of added){if(item.type==='folder')continue;if(after.activeComp)await exec('layer.addItem',{item:item.id});else if(item.type==='composition')await exec('comp.open',{comp:item.id});}
+      for(const item of added){if(item.type==='folder')continue;if(after.activeComp)await exec('layer.addItem',{item:item.id});else if(item.type==='comp'||item.type==='composition')await exec('comp.open',{comp:item.id});}
     }
     await ec.flush();state.tab='layers';
   });
