@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Aurea Studio</title>
+<link rel="stylesheet" href="studio.css">
+</head>
+<body>
+<canvas id="effectcraft_canvas" aria-label="EffectCraft 전체 편집기"></canvas>
+<header id="topbar">
+  <span id="connection">Studio 시작 중</span>
+  <button id="mode" type="button">전체 편집기</button>
+  <button id="save" class="accent" type="button" data-mutate>저장</button>
+</header>
+<main id="touchWorkspace">
+  <section class="viewer-column" aria-label="컴포지션 미리보기">
+    <div id="preview-wrap"><img id="preview" alt="현재 컴포지션의 렌더링 결과"><p id="empty-preview">레이어를 추가해 시작하세요.</p></div>
+    <div class="comp-strip"><strong id="comp-name">컴포지션</strong><span id="comp-meta"></span><button id="new-comp" type="button" data-mutate>새 컴포지션</button></div>
+    <div class="transport">
+      <button id="previous-frame" type="button" aria-label="이전 프레임" data-mutate>이전</button>
+      <button id="play" type="button" aria-label="재생 또는 정지">재생</button>
+      <input id="time" type="range" min="0" max="1" step="0.033333" value="0" aria-label="타임라인 위치">
+      <output id="time-label">0.000 s</output>
+      <button id="next-frame" type="button" aria-label="다음 프레임" data-mutate>다음</button>
+    </div>
+  </section>
+  <section class="tools-column" aria-label="편집 도구">
+    <nav id="tabs" aria-label="작업 패널">
+      <button type="button" data-tab="layers" aria-pressed="true">레이어</button>
+      <button type="button" data-tab="properties" aria-pressed="false">속성</button>
+      <button type="button" data-tab="effects" aria-pressed="false">이펙트</button>
+      <button type="button" data-tab="export" aria-pressed="false">내보내기</button>
+      <button type="button" data-tab="more" aria-pressed="false">더 보기</button>
+    </nav>
+    <div id="panel" tabindex="-1"></div>
+  </section>
+</main>
+<div id="studio-loading"><strong>Aurea Studio</strong><p id="boot-status">앱에 포함된 편집 엔진을 여는 중입니다.</p><p class="muted">인터넷 연결 없이 실행됩니다.</p></div>
+<div id="toast" role="status" aria-live="polite" hidden><span></span><button type="button" aria-label="알림 닫기">닫기</button></div>
+<div id="busy" role="status" aria-live="polite" hidden></div>
+<input id="file-picker" type="file" multiple hidden>
+<script type="module" src="studio.mjs"></script>
+</body>
+</html>
