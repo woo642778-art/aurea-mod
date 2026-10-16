@@ -1,7 +1,7 @@
 name: Verify Aurea Studio touch workspace
 on:
   push:
-    paths: ['.github/workflows/web.yml', 'build-input/web.*.b64', 'web/**', 'tests/test_web.py', 'tests/core.test.mjs', 'tests/test_http.py', 'tests/test_http.c']
+    paths: ['.github/workflows/web.yml', 'build-input/web.*.b64', 'web/**', 'tests/test_web.py', 'tests/core.test.mjs', 'tests/test_http.py', 'tests/test_http.c', 'tools/refine_workspace.py']
   workflow_dispatch:
 permissions:
   contents: write
@@ -33,18 +33,20 @@ jobs:
                   archive.extractall('.')
               pathlib.Path('.web-bootstrap').write_text('Reviewed source transfer: 94eae43e94c5a27811bcdccc0d512fb521071b9909baf95d0a2edf8b23779ed9\n')
           PY
+          python3 tools/refine_workspace.py
       - name: Publish editable workspace and test sources
         run: |
           git add web tests docs README.md LICENSE .web-bootstrap
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'feat: mobile touch workspace using actual EffectCraft engine'
+            git commit -m 'fix: expose effect controls after touch application'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
       - name: Validate portable units and JavaScript syntax
         run: |
+          set -o pipefail
           mkdir -p evidence
           node --check web/studio.mjs
           node --test tests/core.test.mjs | tee evidence/core-tests.log
